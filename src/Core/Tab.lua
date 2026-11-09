@@ -52,6 +52,7 @@ function Tab.new(window, options)
     self.Window = window
     self.Destroyed = false
     self.Name = options.Name or "New Tab"
+    self.Sections = {}
 
     local mode = window.NavigationMode
 
@@ -116,6 +117,25 @@ function Tab.new(window, options)
     end
 
     return self
+end
+
+-- セクション作成
+function Tab:CreateSection(options)
+    assert(
+        not self.Destroyed,
+        "[NEXUS UI] Cannot create a section after tab destruction."
+    )
+
+    options = options or {}
+
+    assert(
+        type(options) == "table",
+        "[NEXUS UI] Section options must be a table."
+    )
+
+    local section = Section.new(self, options)
+
+    return section
 end
 
 -- タブ削除
