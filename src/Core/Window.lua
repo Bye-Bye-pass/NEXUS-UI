@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Window = {}
 Window.__index = Window
+local Tab = require(script.Parent.Tab)
 
 local DEFAULT_SIZE = UDim2.fromOffset(650, 450)
 
