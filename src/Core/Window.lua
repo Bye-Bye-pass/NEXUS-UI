@@ -22,13 +22,75 @@ local COLORS = {
     Close = Color3.fromRGB(235, 85, 100),
 }
 
+local NAVIGATION_MODES = {
+    Sidebar = true,
+    Top = true,
+    Floating = true,
+}
+
 -- イベント接続を管理
 function Window:_Connect(signal, callback)
+    assert(
+        not self.Destroyed,
+        "[NEXUS UI] Cannot connect events after destruction."
+    )
+
     local connection = signal:Connect(callback)
 
     table.insert(self.Connections, connection)
 
     return connection
+end
+
+-- ナビゲーション領域を作成
+local function createNavigation(parent, mode)
+    local navigation = Instance.new("Frame")
+
+    navigation.Name = "Navigation"
+    navigation.BackgroundColor3 = COLORS.Topbar
+    navigation.BorderSizePixel = 0
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = navigation
+
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 6)
+
+    if mode == "Top" then
+        navigation.Size = UDim2.new(1, 0, 0, 44)
+
+        layout.FillDirection = Enum.FillDirection.Horizontal
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+        layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    elseif mode == "Floating" then
+        navigation.Size = UDim2.new(0, 52, 1, -16)
+        navigation.Position = UDim2.fromOffset(0, 8)
+
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Top
+    else
+        navigation.Size = UDim2.new(0, 145, 1, 0)
+
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+        layout.VerticalAlignment = Enum.VerticalAlignment.Top
+    end
+
+    layout.Parent = navigation
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 8)
+    padding.PaddingBottom = UDim.new(0, 8)
+    padding.PaddingLeft = UDim.new(0, 8)
+    padding.PaddingRight = UDim.new(0, 8)
+    padding.Parent = navigation
+
+    navigation.Parent = parent
+
+    return navigation
 end
 
 -- ウィンドウ生成
@@ -40,6 +102,7 @@ function Window.new(nexus, options)
     self.Nexus = nexus
     self.Destroyed = false
     self.Connections = {}
+    self.Tabs = {}
 
     local player = Players.LocalPlayer
 
@@ -49,6 +112,17 @@ function Window.new(nexus, options)
     )
 
     local playerGui = player:WaitForChild("PlayerGui")
+
+    -- Navigation Mode
+    local navigationMode =
+        options.Navigation or nexus.Config.Navigation or "Sidebar"
+
+    assert(
+        NAVIGATION_MODES[navigationMode],
+        "[NEXUS UI] Invalid navigation mode: " .. tostring(navigationMode)
+    )
+
+    self.NavigationMode = navigationMode
 
     -- ScreenGui
     local screenGui = Instance.new("ScreenGui")
@@ -120,13 +194,36 @@ function Window.new(nexus, options)
     closeCorner.CornerRadius = UDim.new(0, 8)
     closeCorner.Parent = closeButton
 
-    -- Content Area
+    -- Main Content
     local content = Instance.new("Frame")
     content.Name = "Content"
-    content.Size = UDim2.new(1, -20, 1, -55)
+    content.Size = UDim2.new(1, -20, 1, -58)
     content.Position = UDim2.fromOffset(10, 48)
     content.BackgroundTransparency = 1
     content.Parent = main
+
+    -- Navigation
+    local navigation = createNavigation(content, navigationMode)
+
+    -- Tab Container
+    local tabContainer = Instance.new("Frame")
+    tabContainer.Name = "TabContainer"
+    tabContainer.BackgroundTransparency = 1
+
+    if navigationMode == "Top" then
+        tabContainer.Position = UDim2.fromOffset(0, 52)
+        tabContainer.Size = UDim2.new(1, 0, 1, -52)
+
+    elseif navigationMode == "Floating" then
+        tabContainer.Position = UDim2.fromOffset(62, 0)
+        tabContainer.Size = UDim2.new(1, -62, 1, 0)
+
+    else
+        tabContainer.Position = UDim2.fromOffset(155, 0)
+        tabContainer.Size = UDim2.new(1, -155, 1, 0)
+    end
+
+    tabContainer.Parent = content
 
     -- Store References
     self.Gui = screenGui
@@ -134,6 +231,8 @@ function Window.new(nexus, options)
     self.Topbar = topbar
     self.Title = title
     self.Content = content
+    self.Navigation = navigation
+    self.TabContainer = tabContainer
 
     -- Drag System
     local dragging = false
@@ -152,12 +251,6 @@ function Window.new(nexus, options)
             dragging = true
             dragStart = input.Position
             startPosition = main.Position
-
-            self:_Connect(input.Changed, function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
         end
     end)
 
@@ -184,12 +277,19 @@ function Window.new(nexus, options)
         )
     end)
 
+    self:_Connect(UserInputService.InputEnded, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = false
+        end
+    end)
+
     -- Close Button
     self:_Connect(closeButton.Activated, function()
         self:Destroy()
     end)
 
-    -- Parent GUI
     screenGui.Parent = playerGui
 
     return self
@@ -203,7 +303,7 @@ function Window:Destroy()
 
     self.Destroyed = true
 
-    -- イベント接続を解除
+    -- イベント解除
     for _, connection in ipairs(self.Connections) do
         if connection.Connected then
             connection:Disconnect()
@@ -212,7 +312,7 @@ function Window:Destroy()
 
     table.clear(self.Connections)
 
-    -- GUIを削除
+    -- GUI削除
     if self.Gui then
         self.Gui:Destroy()
         self.Gui = nil
