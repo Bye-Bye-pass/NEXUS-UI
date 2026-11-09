@@ -125,7 +125,7 @@ function Window.new(nexus, options)
     local dragInput
 
     topbar.InputBegan:Connect(function(input)
-        if not options.Draggable == false then
+        if options.Draggable ~= false then
             if input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch then
 
