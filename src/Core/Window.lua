@@ -19,10 +19,19 @@ local COLORS = {
     Topbar = Color3.fromRGB(27, 30, 40),
     Border = Color3.fromRGB(65, 72, 90),
     Text = Color3.fromRGB(240, 242, 255),
-    Muted = Color3.fromRGB(145, 152, 175),
     Close = Color3.fromRGB(235, 85, 100),
 }
 
+-- イベント接続を管理
+function Window:_Connect(signal, callback)
+    local connection = signal:Connect(callback)
+
+    table.insert(self.Connections, connection)
+
+    return connection
+end
+
+-- ウィンドウ生成
 function Window.new(nexus, options)
     options = options or {}
 
@@ -30,6 +39,7 @@ function Window.new(nexus, options)
 
     self.Nexus = nexus
     self.Destroyed = false
+    self.Connections = {}
 
     local player = Players.LocalPlayer
 
@@ -118,51 +128,6 @@ function Window.new(nexus, options)
     content.BackgroundTransparency = 1
     content.Parent = main
 
-    -- Drag System
-    local dragging = false
-    local dragStart
-    local startPosition
-    local dragInput
-
-    topbar.InputBegan:Connect(function(input)
-        if options.Draggable ~= false then
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-
-                dragging = true
-                dragStart = input.Position
-                startPosition = main.Position
-
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                    end
-                end)
-            end
-        end
-    end)
-
-    topbar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then
-
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            local delta = input.Position - dragStart
-
-            main.Position = UDim2.new(
-                startPosition.X.Scale,
-                startPosition.X.Offset + delta.X,
-                startPosition.Y.Scale,
-                startPosition.Y.Offset + delta.Y
-            )
-        end
-    end)
-
     -- Store References
     self.Gui = screenGui
     self.Main = main
@@ -170,15 +135,67 @@ function Window.new(nexus, options)
     self.Title = title
     self.Content = content
 
-    closeButton.Activated:Connect(function()
+    -- Drag System
+    local dragging = false
+    local dragStart
+    local startPosition
+    local dragInput
+
+    self:_Connect(topbar.InputBegan, function(input)
+        if options.Draggable == false then
+            return
+        end
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            dragStart = input.Position
+            startPosition = main.Position
+
+            self:_Connect(input.Changed, function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    self:_Connect(topbar.InputChanged, function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragInput = input
+        end
+    end)
+
+    self:_Connect(UserInputService.InputChanged, function(input)
+        if not dragging or input ~= dragInput then
+            return
+        end
+
+        local delta = input.Position - dragStart
+
+        main.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
+    end)
+
+    -- Close Button
+    self:_Connect(closeButton.Activated, function()
         self:Destroy()
     end)
 
+    -- Parent GUI
     screenGui.Parent = playerGui
 
     return self
 end
 
+-- ウィンドウ破棄
 function Window:Destroy()
     if self.Destroyed then
         return
@@ -186,8 +203,19 @@ function Window:Destroy()
 
     self.Destroyed = true
 
+    -- イベント接続を解除
+    for _, connection in ipairs(self.Connections) do
+        if connection.Connected then
+            connection:Disconnect()
+        end
+    end
+
+    table.clear(self.Connections)
+
+    -- GUIを削除
     if self.Gui then
         self.Gui:Destroy()
+        self.Gui = nil
     end
 end
 
