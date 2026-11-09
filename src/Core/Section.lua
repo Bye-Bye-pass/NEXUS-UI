@@ -99,6 +99,34 @@ function Section.new(tab, options)
     return self
 end
 
+-- Button生成
+function Section:CreateButton(options)
+    assert(
+        not self.Destroyed,
+        "[NEXUS UI] Cannot create a button inside a destroyed section."
+    )
+
+    options = options or {}
+
+    assert(
+        type(options) == "table",
+        "[NEXUS UI] Button options must be a table."
+    )
+
+    self.Components = self.Components or {}
+
+    -- 表示順を設定
+    if options.LayoutOrder == nil then
+        options.LayoutOrder = #self.Components + 1
+    end
+
+    local button = Button.new(self, options)
+
+    table.insert(self.Components, button)
+
+    return button
+end
+
 -- Section削除
 function Section:Destroy()
     if self.Destroyed then
