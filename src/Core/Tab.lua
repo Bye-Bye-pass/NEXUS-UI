@@ -85,24 +85,43 @@ function Tab.new(window, options)
     buttonCorner.CornerRadius = UDim.new(0, 7)
     buttonCorner.Parent = button
 
-    -- ページ
-    local page = Instance.new("Frame")
-    page.Name = "TabPage"
-    page.Size = UDim2.fromScale(1, 1)
-    page.BackgroundColor3 = COLORS.Page
-    page.BorderSizePixel = 0
-    page.Visible = false
+-- ページ
+local page = Instance.new("ScrollingFrame")
+page.Name = "TabPage"
+page.Size = UDim2.fromScale(1, 1)
+page.BackgroundColor3 = COLORS.Page
+page.BorderSizePixel = 0
+page.Visible = false
 
-    local pageCorner = Instance.new("UICorner")
-    pageCorner.CornerRadius = UDim.new(0, 10)
-    pageCorner.Parent = page
+page.ScrollBarThickness = 4
+page.ScrollBarImageColor3 = COLORS.Active
+page.ScrollingDirection = Enum.ScrollingDirection.Y
+page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+page.CanvasSize = UDim2.new(0, 0, 0, 0)
 
-    -- 参照を保存
-    self.Button = button
-    self.Page = page
+local pageCorner = Instance.new("UICorner")
+pageCorner.CornerRadius = UDim.new(0, 10)
+pageCorner.Parent = page
 
-    button.Parent = window.Navigation
-    page.Parent = window.TabContainer
+-- Section配置レイアウト
+local sectionLayout = Instance.new("UIListLayout")
+sectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+sectionLayout.Padding = UDim.new(0, 12)
+sectionLayout.Parent = page
+
+local pagePadding = Instance.new("UIPadding")
+pagePadding.PaddingTop = UDim.new(0, 12)
+pagePadding.PaddingBottom = UDim.new(0, 12)
+pagePadding.PaddingLeft = UDim.new(0, 12)
+pagePadding.PaddingRight = UDim.new(0, 12)
+pagePadding.Parent = page
+
+-- 参照を保存
+self.Button = button
+self.Page = page
+
+button.Parent = window.Navigation
+page.Parent = window.TabContainer
 
     -- タブクリック
     window:_Connect(button.Activated, function()
