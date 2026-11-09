@@ -6,6 +6,8 @@
     Designed for Roblox Studio
 ]]
 
+local Button = require(script.Parent.Parent.Components.Button)
+
 local Section = {}
 Section.__index = Section
 
