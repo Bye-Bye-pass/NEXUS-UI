@@ -296,6 +296,25 @@ function Window.new(nexus, options)
     return self
 end
 
+-- タブ作成
+function Window:CreateTab(options)
+    assert(
+        not self.Destroyed,
+        "[NEXUS UI] Cannot create a tab after window destruction."
+    )
+
+    options = options or {}
+
+    assert(
+        type(options) == "table",
+        "[NEXUS UI] Tab options must be a table."
+    )
+
+    local tab = Tab.new(self, options)
+
+    return tab
+end
+
 -- ウィンドウ破棄
 function Window:Destroy()
     if self.Destroyed then
