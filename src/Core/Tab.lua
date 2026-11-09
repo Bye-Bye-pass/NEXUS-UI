@@ -6,6 +6,8 @@
     Designed for Roblox Studio
 ]]
 
+local Section = require(script.Parent.Section)
+
 local Tab = {}
 Tab.__index = Tab
 
