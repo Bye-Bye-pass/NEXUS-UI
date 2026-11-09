@@ -109,9 +109,16 @@ function Section:Destroy()
 
     local index = table.find(tab.Sections, self)
 
-    if index then
-        table.remove(tab.Sections, index)
+if index then
+    table.remove(tab.Sections, index)
+
+    -- Sectionの表示順を再整理
+    for order, section in ipairs(tab.Sections) do
+        if section.Container then
+            section.Container.LayoutOrder = order
+        end
     end
+end
 
     if self.Container then
         self.Container:Destroy()
